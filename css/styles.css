@@ -62,7 +62,7 @@ main:focus { outline: none; }
 
 /* ── Top bar / nav ─────────────────────────── */
 .topbar {
-  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: center; gap: 16px;
   padding: 10px 16px; background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
 }
@@ -298,3 +298,5 @@ input[type="range"] { accent-color: var(--primary); width: 100%; }
 .locked-note { font-size: .78rem; color: var(--ink-2); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .badge[hidden] { display: none; }
+
+[hidden] { display: none !important; }

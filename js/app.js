@@ -67,28 +67,30 @@
 
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-say]');
-    if (b) { e.preventDefault(); TTS.speak(b.dataset.say); }
+    if (b) { e.preventDefault(); TTS.speak(b.dataset.say); return; }
+    if (e.target.closest('[data-rerun]')) { e.preventDefault(); route(); }
   });
 
   // ── Router ───────────────────────────────────────────────────
   let teardown = null; // cleanup for the active view (session key handlers etc.)
   const routes = [
-    [/^#?\/?$/, viewHome, 'home'],
-    [/^#\/path$/, viewPath, 'path'],
-    [/^#\/unit\/(u\d+)$/, viewUnit, 'path'],
-    [/^#\/practice\/(u\d+)$/, viewPractice, 'path'],
-    [/^#\/review$/, viewReview, 'review'],
-    [/^#\/verbs$/, viewVerbs, 'verbs'],
-    [/^#\/words$/, viewWords, 'words'],
-    [/^#\/settings$/, viewSettings, 'settings'],
+    // Plain #name routes, so links survive hosts that only pass simple hashes.
+    [/^#?(home)?$/, viewHome, 'home'],
+    [/^#path$/, viewPath, 'path'],
+    [/^#unit-(u\d+)$/, viewUnit, 'path'],
+    [/^#practice-(u\d+)$/, viewPractice, 'path'],
+    [/^#review$/, viewReview, 'review'],
+    [/^#verbs$/, viewVerbs, 'verbs'],
+    [/^#words$/, viewWords, 'words'],
+    [/^#prefs$/, viewSettings, 'settings'],
   ];
   function route() {
     if (teardown) { teardown(); teardown = null; }
     if (TTS.supported) speechSynthesis.cancel();
     document.querySelector('.feedback')?.remove();
-    const h = location.hash || '#/';
+    const h = location.hash || '#home';
     let found = routes.find(([re]) => re.test(h));
-    if (!found) { location.hash = '#/'; return; }
+    if (!found) { location.hash = '#home'; return; }
     const [re, fn, nav] = found;
     document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === nav));
     document.querySelectorAll('[data-nav]').forEach((a) => a.toggleAttribute('aria-current', a.dataset.nav === nav));
@@ -140,12 +142,12 @@
               <div class="muted small">${esc(next.summary)}</div>
             </div>
           </div>
-          <div class="btn-row" style="margin-top:14px"><a class="btn" href="#/unit/${next.id}">Open lesson</a></div>
+          <div class="btn-row" style="margin-top:14px"><a class="btn" href="#unit-${next.id}">Open lesson</a></div>
         </section>` : html`
         <section class="card continue"><div class="continue-row"><div class="continue-icon">🎓</div><div><h2 style="margin:0">¡Enhorabuena!</h2><div class="muted">You finished every unit. Keep your words fresh with reviews and verb drills.</div></div></div></section>`}
 
         <div class="grid grid-2" style="margin-top:14px">
-          <a class="card" href="#/review" style="text-decoration:none;color:inherit">
+          <a class="card" href="#review" style="text-decoration:none;color:inherit">
             <div class="eyebrow muted">Review</div>
             <h3 style="margin:.2em 0">${due ? `${due} word${due === 1 ? '' : 's'} due` : 'All caught up'}</h3>
             <div class="small muted">${due ? 'Spaced repetition keeps them in memory.' : 'New reviews appear as you learn.'}</div>
@@ -199,10 +201,10 @@
               const cls = c ? 'done' : !open ? 'locked' : next && next.id === u.id ? 'current' : '';
               const status = c ? `<span class="unit-status ok">✓ ${c.best}%</span>` : !open ? '<span class="unit-status" aria-label="Locked">🔒</span>' : '<span class="unit-status">Start ›</span>';
               const inner = `<div class="unit-ico" aria-hidden="true">${u.icon}</div><div><div class="unit-title">${n}. ${esc(u.title)}</div><div class="unit-sum">${esc(u.summary)}</div></div>${status}`;
-              return open ? `<a class="unit-item ${cls}" href="#/unit/${u.id}">${inner}</a>` : `<div class="unit-item ${cls}" aria-disabled="true">${inner}</div>`;
+              return open ? `<a class="unit-item ${cls}" href="#unit-${u.id}">${inner}</a>` : `<div class="unit-item ${cls}" aria-disabled="true">${inner}</div>`;
             }).join('')}
           </div>`).join('')}
-        <p class="small muted" style="margin-top:20px">Already know some Spanish? Turn on <a href="#/settings">Free mode</a> in Settings to unlock every unit.</p>
+        <p class="small muted" style="margin-top:20px">Already know some Spanish? Turn on <a href="#prefs">Free mode</a> in Settings to unlock every unit.</p>
       </div>`;
   }
 
@@ -232,9 +234,9 @@
   }
   function viewUnit(id) {
     const u = unitById(id);
-    if (!u) { location.hash = '#/path'; return; }
+    if (!u) { location.hash = '#path'; return; }
     if (!S.isUnlocked(id)) {
-      $app.innerHTML = `<div class="wrap"><div class="card empty"><div class="emoji">🔒</div><h2>This unit is locked</h2><p class="muted">Finish the previous unit first, or enable Free mode in Settings.</p><a class="btn primary" href="#/path">Back to the path</a></div></div>`;
+      $app.innerHTML = `<div class="wrap"><div class="card empty"><div class="emoji">🔒</div><h2>This unit is locked</h2><p class="muted">Finish the previous unit first, or enable Free mode in Settings.</p><a class="btn primary" href="#path">Back to the path</a></div></div>`;
       return;
     }
     const n = S.unitIndex(id) + 1;
@@ -244,7 +246,7 @@
     const draw = () => {
       $app.innerHTML = html`
         <div class="wrap">
-          <div class="crumbs"><a href="#/path">‹ Learning path</a></div>
+          <div class="crumbs"><a href="#path">‹ Learning path</a></div>
           <div class="unit-head">
             <div class="unit-ico" aria-hidden="true">${u.icon}</div>
             <div><div class="eyebrow muted">Unit ${n} · ${u.level}${c ? ` · ✓ best ${c.best}%` : ''}</div><h1 style="margin:0">${esc(u.title)}</h1></div>
@@ -256,7 +258,7 @@
           </div>
           <div class="stack">${tab === 'grammar' ? renderGrammar(u) : renderVocab(u)}</div>
           ${tab === 'grammar' ? `<p class="small muted" style="margin-top:14px">Next, look over the <a href="#" data-tab="vocab">vocabulary</a>. The practice uses both.</p>` : `<p class="small muted" style="margin-top:14px">Tap 🔊 to hear each word. When you pass the practice, these words go into your review deck.</p>`}
-          <div class="sticky-cta"><a class="btn primary block" href="#/practice/${id}">${c ? 'Practise again' : 'Start practice'} · ${u.exercises.length + 7} questions</a></div>
+          <div class="sticky-cta"><a class="btn primary block" href="#practice-${id}">${c ? 'Practise again' : 'Start practice'} · ${u.exercises.length + 7} questions</a></div>
         </div>`;
       $app.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', (e) => {
         e.preventDefault();
@@ -613,11 +615,11 @@
   // ── Practice (unit) ──────────────────────────────────────────
   function viewPractice(id) {
     const u = unitById(id);
-    if (!u || !S.isUnlocked(id)) { location.hash = '#/path'; return; }
+    if (!u || !S.isUnlocked(id)) { location.hash = '#path'; return; }
     let xp = 0;
     runSession({
       items: buildPractice(u),
-      exitHref: '#/unit/' + id,
+      exitHref: '#unit-' + id,
       onAnswer(item, ok, firstTry) { if (ok && firstTry) xp += 2; },
       onDone({ total, right, score, missed }) {
         const passed = score >= PASS;
@@ -636,10 +638,10 @@
               ? (wasComplete ? 'Great refresher.' : `${u.vocab.length} new words were added to your review deck.${nextU ? ' The next unit is unlocked.' : ''}`)
               : `You need ${PASS}% to complete this unit. Reread the grammar notes and try again. You’ll get it.`}</p>
             <div class="btn-row" style="justify-content:center">
-              ${passed && nextU ? `<a class="btn primary" href="#/unit/${nextU.id}">Next: ${esc(nextU.title)} ›</a>` : ''}
-              ${!passed ? `<a class="btn primary" href="#/unit/${id}">Review the lesson</a>` : ''}
-              <button class="btn" onclick="location.reload()">Practise again</button>
-              <a class="btn" href="#/">Home</a>
+              ${passed && nextU ? `<a class="btn primary" href="#unit-${nextU.id}">Next: ${esc(nextU.title)} ›</a>` : ''}
+              ${!passed ? `<a class="btn primary" href="#unit-${id}">Review the lesson</a>` : ''}
+              <button class="btn" data-rerun>Practise again</button>
+              <a class="btn" href="#home">Home</a>
             </div>
           </div>
           ${missed.length ? html`<div class="card mistakes" style="margin-top:14px"><h3>Worth another look</h3><ul>${missed.map(({ item, result }) => `<li><span class="muted">${esc(item.sentence || item.prompt || item.audio || 'Matching pairs')}</span>${result.expected ? ` → <b>${esc(result.expected)}</b>` : ''}</li>`).join('')}</ul></div>` : ''}`;
@@ -660,7 +662,7 @@
     const due = S.dueCards();
     const learned = Object.keys(S.state.cards);
     if (!learned.length) {
-      $app.innerHTML = `<div class="wrap"><div class="card empty"><div class="emoji">📭</div><h2>No words to review yet</h2><p class="muted">Complete your first unit and its words will show up here, scheduled with spaced repetition.</p><a class="btn primary" href="#/path">Go to the path</a></div></div>`;
+      $app.innerHTML = `<div class="wrap"><div class="card empty"><div class="emoji">📭</div><h2>No words to review yet</h2><p class="muted">Complete your first unit and its words will show up here, scheduled with spaced repetition.</p><a class="btn primary" href="#path">Go to the path</a></div></div>`;
       return;
     }
     if (!due.length) {
@@ -668,7 +670,7 @@
       $app.innerHTML = html`<div class="wrap"><div class="card empty"><div class="emoji">✅</div><h2>All caught up!</h2>
         <p class="muted">Next review: <b>${esc(new Date(nextDue + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}</b>.</p>
         <p class="muted">Want more? Practise the words you find hardest. This won’t change their schedule.</p>
-        <div class="btn-row" style="justify-content:center"><button class="btn primary" id="weak">Practise weak words</button><a class="btn" href="#/path">Learn something new</a></div></div></div>`;
+        <div class="btn-row" style="justify-content:center"><button class="btn primary" id="weak">Practise weak words</button><a class="btn" href="#path">Learn something new</a></div></div></div>`;
       $app.querySelector('#weak').addEventListener('click', () => startReview(weakest(10), false));
       return;
     }
@@ -684,7 +686,7 @@
     let xp = 0;
     runSession({
       items: shuffle(cids).map((cid) => cardItem(cid, pool, graded)),
-      exitHref: '#/',
+      exitHref: '#home',
       onAnswer(item, ok, firstTry) {
         if (!firstTry) return;
         if (item.graded) S.gradeCard(item.cid, ok);
@@ -700,8 +702,8 @@
           <div class="big">${right}/${total}</div>
           <p class="muted">+${xp} XP${graded ? ' · Words you missed will come back soon; the rest are scheduled further out.' : ''}</p>
           <div class="btn-row" style="justify-content:center">
-            ${remaining ? `<button class="btn primary" onclick="location.reload()">Review ${remaining} more</button>` : `<a class="btn primary" href="#/">Home</a>`}
-            <a class="btn" href="#/words">See all words</a>
+            ${remaining ? `<button class="btn primary" data-rerun>Review ${remaining} more</button>` : `<a class="btn primary" href="#home">Home</a>`}
+            <a class="btn" href="#words">See all words</a>
           </div></div>
           ${missed.length ? html`<div class="card mistakes" style="margin-top:14px"><h3>Missed this time</h3><ul>${missed.map(({ item }) => { const w = S.cardWord(item.cid).word; return `<li>${speakBtn(w[0])} <b>${esc(w[0])}</b> = ${esc(w[1])}</li>`; }).join('')}</ul></div>` : ''}`;
       },
@@ -732,7 +734,7 @@
           <div class="field"><label for="vcount">Questions</label>
             <select id="vcount"><option>10</option><option selected>20</option><option>30</option></select></div>
           <div style="margin-top:16px"><button class="btn primary block" id="drill">Start drill</button></div>`
-          : html`<div class="empty"><div class="emoji">🔒</div><p class="muted">The trainer opens after <b>${unitName('u6')}</b>, where you learn your first verb pattern.</p><a class="btn primary" href="#/path">Go to the path</a></div>`}
+          : html`<div class="empty"><div class="emoji">🔒</div><p class="muted">The trainer opens after <b>${unitName('u6')}</b>, where you learn your first verb pattern.</p><a class="btn primary" href="#path">Go to the path</a></div>`}
         </section>
 
         <section class="card" style="margin-top:14px">
@@ -778,13 +780,13 @@
       });
       let xp = 0;
       runSession({
-        items, exitHref: '#/verbs',
+        items, exitHref: '#verbs',
         onAnswer(item, ok, firstTry) { if (ok && firstTry) xp += 1; },
         onDone({ total, right, score, missed }) {
           S.addXP(xp);
           return html`<div class="card results"><div class="emoji">${score >= 90 ? '⚡' : '🔤'}</div><h1>Drill complete</h1><div class="big">${score}%</div>
             <p class="muted">${right} of ${total} right on the first try · +${xp} XP</p>
-            <div class="btn-row" style="justify-content:center"><a class="btn primary" href="#/verbs">New drill</a><a class="btn" href="#/">Home</a></div></div>
+            <div class="btn-row" style="justify-content:center"><a class="btn primary" href="#verbs">New drill</a><a class="btn" href="#home">Home</a></div></div>
             ${missed.length ? html`<div class="card mistakes" style="margin-top:14px"><h3>Practise these</h3><ul>${missed.map(({ item, result }) => `<li>${esc(item.label.split(' · ')[0])}: ${esc(item.prompt)} → <b>${esc(result.expected)}</b></li>`).join('')}</ul></div>` : ''}`;
         },
       });
@@ -864,11 +866,21 @@
 
         <section class="card" style="margin-top:14px">
           <h3>Your data</h3>
-          <p class="small muted">Progress is saved in this browser only. Export a backup to move it to another device.</p>
+          <p class="small muted">Progress is saved in this browser only. To move it to another browser or device, copy a backup code here and paste it there.</p>
           <div class="btn-row">
-            <button class="btn small" id="export">⬇ Export progress</button>
-            <label class="btn small" style="cursor:pointer">⬆ Import progress<input type="file" id="import" accept="application/json,.json" hidden></label>
+            <button class="btn small" id="export">Copy backup code</button>
+            <button class="btn small" id="show-import">Paste backup code</button>
+            <label class="btn small" style="cursor:pointer">Import from file<input type="file" id="import" accept="application/json,.json" hidden></label>
+          </div>
+          <div id="backup-box" hidden style="margin-top:12px">
+            <label for="backup-text" class="small"><b id="backup-label">Backup code</b></label>
+            <textarea id="backup-text" rows="5" spellcheck="false" style="width:100%;margin-top:6px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:12px/1.4 ui-monospace,monospace"></textarea>
+            <div class="btn-row" style="margin-top:8px"><button class="btn small primary" id="do-import" hidden>Restore this backup</button></div>
+          </div>
+          <div class="btn-row" style="margin-top:16px">
             <button class="btn small bad" id="reset">Reset everything</button>
+            <span id="reset-confirm" hidden class="small"><b>Delete all progress, words and settings?</b> This can’t be undone.
+              <button class="btn small bad" id="reset-yes">Yes, delete</button> <button class="btn small" id="reset-no">Cancel</button></span>
           </div>
         </section>
       </div>`;
@@ -884,22 +896,34 @@
     bindSelect('theme', 'theme', String, applyTheme);
     const rate = $app.querySelector('#rate');
     rate && rate.addEventListener('input', () => { S.setSetting('rate', +rate.value); $app.querySelector('#rate-val').textContent = (+rate.value).toFixed(2) + '×'; });
+    const box = $app.querySelector('#backup-box'), text = $app.querySelector('#backup-text');
+    const doImport = $app.querySelector('#do-import'), label = $app.querySelector('#backup-label');
     $app.querySelector('#export').addEventListener('click', () => {
-      const blob = new Blob([S.exportJSON()], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `paso-a-paso-progress-${S.today()}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      const code = JSON.stringify(S.state);
+      box.hidden = false; doImport.hidden = true; label.textContent = 'Your backup code';
+      text.value = code; text.readOnly = true;
+      const fallback = () => { text.focus(); text.select(); toast('Select all and copy the code'); };
+      try {
+        navigator.clipboard.writeText(code).then(() => toast('Backup code copied'), fallback);
+      } catch (err) { fallback(); }
+    });
+    $app.querySelector('#show-import').addEventListener('click', () => {
+      box.hidden = false; doImport.hidden = false; label.textContent = 'Paste your backup code';
+      text.readOnly = false; text.value = ''; text.focus();
+    });
+    doImport.addEventListener('click', () => {
+      try { S.importJSON(text.value.trim()); applyTheme(); toast('Progress restored'); location.hash = '#home'; route(); }
+      catch (err) { toast('That code isn’t a valid backup. Copy it again and paste the whole code.'); }
     });
     $app.querySelector('#import').addEventListener('change', async (e) => {
       const f = e.target.files[0]; if (!f) return;
       try { S.importJSON(await f.text()); applyTheme(); toast('Progress imported'); route(); }
       catch (err) { toast('That file could not be imported'); }
     });
-    $app.querySelector('#reset').addEventListener('click', () => {
-      if (confirm('Delete all progress, words and settings? This cannot be undone.')) { S.reset(); applyTheme(); toast('Progress reset'); location.hash = '#/'; route(); }
-    });
+    const resetBtn = $app.querySelector('#reset'), resetBox = $app.querySelector('#reset-confirm');
+    resetBtn.addEventListener('click', () => { resetBtn.hidden = true; resetBox.hidden = false; });
+    $app.querySelector('#reset-no').addEventListener('click', () => { resetBtn.hidden = false; resetBox.hidden = true; });
+    $app.querySelector('#reset-yes').addEventListener('click', () => { S.reset(); applyTheme(); toast('Progress reset'); location.hash = '#home'; route(); });
   }
 
   // ── Boot ─────────────────────────────────────────────────────

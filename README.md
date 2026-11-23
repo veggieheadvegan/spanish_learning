@@ -16,7 +16,7 @@ No build step, no dependencies, no account. Open `index.html` in a browser and s
 | **Verb trainer** | 44 verbs × 7 tenses (present, preterite, imperfect, future, conditional, present perfect, subjunctive). Tenses unlock as you reach them; full conjugation tables are always available. |
 | **Forgiving checking** | Accent slips and one-letter typos count as correct and show the exact spelling. Optional pronouns are accepted. An on-screen accent bar is shown for á é í ó ú ñ ü ¿ ¡. |
 | **Audio** | Text-to-speech for every Spanish word and example, using your device's Spanish voices. |
-| **Progress** | XP, daily goal, streak, 7-day chart, level progress, word mastery. Progress is saved in your browser, with export/import for backups. |
+| **Progress** | XP, daily goal, streak, 7-day chart, level progress, word mastery. Progress is saved in your browser; a backup code (Settings) moves it between devices. |
 
 ### Curriculum
 
