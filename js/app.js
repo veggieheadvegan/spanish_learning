@@ -292,10 +292,16 @@
   const mcEnEs = (w, pool, extra = {}) => Object.assign({ kind: 'mc', label: 'Choose the Spanish', prompt: w[1], options: [w[0], ...distractors(w, pool, 0)], correct: w[0], say: w[0] }, extra);
   const listenItem = (w, pool, extra = {}) => Object.assign({ kind: 'listen', label: 'Listen and choose the meaning', audio: w[0], options: [w[1], ...distractors(w, pool, 1)], correct: w[1], say: w[0], reveal: w[0] }, extra);
   function typeEnEs(w, extra = {}) {
+    // Never show the vocab note before answering: it usually contains the answer
+    // (e.g. "f. la estudiante"). Accept the feminine / regional form it names, and
+    // show the note afterwards instead.
+    const forms = [w[0]];
+    const alt = w[2] && w[2].match(/^(?:f\.|Latin America:)\s*(.+)$/);
+    if (alt) forms.push(alt[1]);
+    const answers = [];
+    forms.forEach((f) => { answers.push(f); const b = f.replace(ARTICLE, ''); if (b !== f) answers.push(b); });
     const bare = w[0].replace(ARTICLE, '');
-    const answers = [w[0]];
-    if (bare !== w[0]) answers.push(bare);
-    return Object.assign({ kind: 'type', label: 'Write it in Spanish', prompt: w[1], hint: w[2] || '', answers, say: w[0], article: bare !== w[0] ? w[0] : null }, extra);
+    return Object.assign({ kind: 'type', label: 'Write it in Spanish', prompt: w[1], hint: '', answers, say: w[0], article: bare !== w[0] ? w[0] : null, explain: w[2] ? `Note: ${w[2]}` : undefined }, extra);
   }
   const matchItem = (words) => ({ kind: 'match', label: 'Match the pairs', pairs: words.map((w) => [w[0], w[1]]) });
 
